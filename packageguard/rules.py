@@ -1,46 +1,86 @@
-RULES = [
+JS_RULES = [
     {
-        "name": "child_process",
-        "pattern": r"child_process",
-        "severity": 4
+        "id": "child-process",
+        "pattern": r"require\s*\(\s*['\"]child_process['\"]\s*\)|from\s+['\"]child_process['\"]",
+        "severity": "high",
+        "message": "Uses child_process module",
     },
     {
-        "name": "eval",
-        "pattern": r"eval\(",
-        "severity": 4
+        "id": "exec-sync",
+        "pattern": r"\bexecSync\s*\(",
+        "severity": "high",
+        "message": "Executes shell commands synchronously",
     },
     {
-        "name": "buffer",
-        "pattern": r"Buffer.from\(",
-        "severity": 4
+        "id": "eval",
+        "pattern": r"\beval\s*\(",
+        "severity": "high",
+        "message": "Uses eval for dynamic code execution",
     },
     {
-        "name": "env",
-        "pattern": r"process.env",
-        "severity": 4
+        "id": "function-constructor",
+        "pattern": r"\bFunction\s*\(",
+        "severity": "high",
+        "message": "Uses Function constructor for dynamic code execution",
     },
     {
-        "name": "http",
-        "pattern": r"http://",
-        "severity": 4
+        "id": "base64-decode",
+        "pattern": r"Buffer\.from\s*\([^)]*['\"]base64['\"]",
+        "severity": "medium",
+        "message": "Decodes Base64 content",
     },
     {
-        "name": "https",
-        "pattern": r"https://",
-        "severity": 4
+        "id": "env-access",
+        "pattern": r"process\.env",
+        "severity": "medium",
+        "message": "Accesses environment variables",
     },
     {
-        "name": "preinstall",
-        "pattern": r"preinstall",
-        "severity": 4
+        "id": "credential-file",
+        "pattern": r"\.npmrc|\.ssh|id_rsa|GITHUB_TOKEN|NPM_TOKEN",
+        "severity": "high",
+        "message": "References credential-related files or tokens",
     },
     {
-        "name": "postinstall",
-        "pattern": r"postinstall",
-        "severity": 4
-    }
+        "id": "network-url",
+        "pattern": r"https?://",
+        "severity": "medium",
+        "message": "Contains external URL",
+    },
 ]
 
+LIFECYCLE_SCRIPTS = {
+    "preinstall",
+    "install",
+    "postinstall",
+    "prepare",
+    "prepublish",
+}
 
-# http://
-# https://
+
+SCRIPT_PATTERNS = [
+    {
+        "id": "remote-download",
+        "pattern": r"\b(curl|wget)\b|https?://",
+        "severity": "high",
+        "message": "Lifecycle script downloads or references remote content",
+    },
+    {
+        "id": "shell-execution",
+        "pattern": r"\b(bash|sh|powershell|cmd\.exe)\b",
+        "severity": "high",
+        "message": "Lifecycle script invokes a shell",
+    },
+    {
+        "id": "inline-code-execution",
+        "pattern": r"\b(node|python|python3)\s+-[ec]\b",
+        "severity": "high",
+        "message": "Lifecycle script executes inline code",
+    },
+    {
+        "id": "obfuscation",
+        "pattern": r"\b(base64|eval)\b",
+        "severity": "medium",
+        "message": "Lifecycle script contains obfuscation-related keyword",
+    },
+]

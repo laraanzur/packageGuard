@@ -5,6 +5,8 @@ Simple express server for listening to malicious package
 For now only postinstall exploit that reads .env files and sends them to the attackers server. Will add runtime exploits (index.js) and other not so trivial exploits soon.
 ## demo
 As of now nothing else than a simulation of a victims package.json infected with our malicious package.
+## packageguard
+A tool that detects malicious packages based on package.json and .*js files, then makes a report on the findings.
 
 # To test the malicious package:
 ## Setup attacker's server
@@ -15,6 +17,9 @@ As of now nothing else than a simulation of a victims package.json infected with
 ## Install suspicious package
 1. cd demo/backend
 2. npm install (or npm rebuild if running it multiple times)
+
+# To test the detection tool
+`python -m packageguard.cli --path path_to_package`
 
 
 
