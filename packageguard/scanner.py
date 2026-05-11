@@ -4,7 +4,20 @@ import re
 from packageguard.rules import JS_RULES, LIFECYCLE_SCRIPTS, SCRIPT_PATTERNS
 import tarfile
 import tempfile
+import zipfile
 import shutil
+
+from pathlib import Path
+
+def find_package_root(root: Path) -> Path:
+
+    # Find all package.json files
+    matches = [p for p in root.rglob("package.json") if "node_modules" not in p.parts]
+
+    # Choose the one with shortest relative path from root
+    matches.sort(key=lambda p: len(p.relative_to(root).parts))
+
+    return matches[0].parent
 
 def prepare_scan_target(path):
     # Case 1: If path is a directory, it doesnt need unzipping
@@ -20,19 +33,32 @@ def prepare_scan_target(path):
             tar.extractall(temp_dir)
 
         # Posix path to temporary directory
-        extracted_root = Path(temp_dir)
-
-        package_dir = extracted_root / "package" # Sometimes it gets unzipped in this directory, so double checking
-        if package_dir.exists():
-            scan_path = package_dir
-        else:
-            scan_path = extracted_root
+        root = Path(temp_dir)
+        extracted_root = find_package_root(root)
 
         # Define cleanup function for after the end of the program
         def cleanup():
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-        return scan_path, cleanup
+        return extracted_root, cleanup
+    
+    # Case 3: Zipped file - .zip
+    if path.is_file() and path.suffix == ".zip":
+        # Make a temporary directory and extract files in it
+        temp_dir = tempfile.mkdtemp(prefix="packageguard_")
+
+        with zipfile.ZipFile(path, "r") as zip_ref:
+            zip_ref.extractall(temp_dir)
+
+        # Path to temporary directory
+        root = Path(temp_dir)
+        extracted_root = find_package_root(root)
+        
+        # Define cleanup function for after the end of the program
+        def cleanup():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        return extracted_root, cleanup
 
 def search_package_json(clean_path):
     # Load the file
