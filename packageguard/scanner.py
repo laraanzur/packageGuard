@@ -6,10 +6,9 @@ import tarfile
 import tempfile
 import zipfile
 import shutil
+import shlex
 
-from pathlib import Path
-
-def find_package_root(root: Path) -> Path:
+def find_package_root(root):
 
     # Find all package.json files
     matches = [p for p in root.rglob("package.json") if "node_modules" not in p.parts]
@@ -60,6 +59,19 @@ def prepare_scan_target(path):
 
         return extracted_root, cleanup
 
+def extract_script_file(cmd):
+    # Get script from command (if it exists)
+    try:
+        parts = shlex.split(cmd, posix=False)
+    except ValueError:
+        return None
+
+    for part in parts[1:]:
+        if part.endswith((".js", ".cjs", ".mjs")):
+            return part
+
+    return None
+
 def search_package_json(clean_path):
     # Load the file
     with open(clean_path / 'package.json', 'r') as f:
@@ -71,27 +83,35 @@ def search_package_json(clean_path):
     # Find the scripts section, then go through every script
     scripts = package_json.get("scripts", {})
 
-
     # Find lifecycle scripts
     for name, command in scripts.items():
         if name in LIFECYCLE_SCRIPTS:
+            script_file = extract_script_file(command)
             findings.append({
-                "rule": "lifecycle-script",
+                "rule_id": "lifecycle-script",
+                "title": "Lifecycle script",
                 "severity": "high",
-                "file": "package.json",
-                "snippet": f"{name}: {command}",
-                "message": f"Package defines npm lifecycle script '{name}', which can execute during installation.",
+                "confidence": "",
+                "file": f"package.json -> scripts -> {script_file if script_file else name}",
+                "line": None,
+                "evidence": f"{name}: {command}",
+                "explanation_recommendation": "",
+                "tags": ["lifecycle", "script"]
             })
 
         # Match certain script patterns to commans
         for rule in SCRIPT_PATTERNS:
             if re.search(rule["pattern"], command, re.IGNORECASE):
                 findings.append({
-                    "rule": rule["id"],
+                    "rule_id": rule["id"],
+                    "title": rule["title"],
                     "severity": rule["severity"],
+                    "confidence": "",
                     "file": "package.json",
-                    "snippet": f"{name}: {command}",
-                    "message": rule["message"],
+                    "line": None,
+                    "evidence": f"{name}: {command}",
+                    "explanation_recommendation": "",
+                    "tags": rule["id"].split("-")
                 })
     
     return findings, package_json
@@ -134,11 +154,16 @@ def scan_js_files(output, findings):
                 for rule in JS_RULES:
                     if re.search(rule["pattern"], line, re.IGNORECASE):
                         findings.append({
-                            "rule": rule["id"],
+                            "rule_id": rule["id"],
+                            "title": rule["title"],
                             "severity": rule["severity"],
+                            "confidence": "",
                             "file": str(file),
-                            "snippet": line.strip(),
+                            "line": line_number,
+                            "evidence": line.strip(),
                             "message": rule["message"],
+                            "explanation_recommendation": "",
+                            "tags": rule["id"].split("-")
                         })
     
     return findings

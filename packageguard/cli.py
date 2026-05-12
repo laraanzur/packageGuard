@@ -28,12 +28,11 @@ def print_report(report):
     for finding in report["findings"]:
         location = finding["file"]
 
-        print(f"[{finding['severity'].upper()}] {location} - {finding['rule']}")
-        print(f"  {finding['message']}")
+        print(f"[{finding['severity'].upper()}] {location} - {finding['title']}")
+        print(f"  {finding['explanation_recommendation']}")
 
-        if finding["snippet"]:
-            print(f"  > {finding['snippet']}")
-
+        if finding["evidence"]:
+            print(f"  > {finding['evidence']}")
         print()
 
 parser = argparse.ArgumentParser('PackageGuard Demo')
