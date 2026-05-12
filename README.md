@@ -19,7 +19,9 @@ A tool that detects malicious packages based on package.json and .*js files, the
 2. npm install (or npm rebuild if running it multiple times)
 
 # To test the detection tool
-`python -m packageguard.cli --path path_to_package`
+1. `npm install`
+
+2. `python -m packageguard.cli --path path_to_package`
 
 
 

@@ -7,6 +7,7 @@ import tempfile
 import zipfile
 import shutil
 import shlex
+import subprocess
 
 def find_package_root(root):
 
@@ -145,10 +146,27 @@ def find_js_files(clean_path):
 
     return output 
 
+def scan_js_file_ast(file):
+    ast_scanner = Path(__file__).parent / "ast_scanner.js"
+
+    result = subprocess.run(
+        ["node", str(ast_scanner), str(file)],
+        capture_output=True,
+        text=True,
+        check=False
+    )
+
+    ast_findings = json.loads(result.stdout)
+
+    return ast_findings
+
 def scan_js_files(output, findings):
     for group in output:
         for file in output[group]:
             file = Path(file)
+            # Integrate AST based finding
+            ast_findings = scan_js_file_ast(file)
+            findings.extend(ast_findings)
             lines = file.read_text(errors="ignore").splitlines()
             for line_number, line in enumerate(lines, start=1):
                 for rule in JS_RULES:
