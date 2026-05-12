@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 import re
 from packageguard.rules import JS_RULES, LIFECYCLE_SCRIPTS, SCRIPT_PATTERNS
+from packageguard.behavior_chains import apply_behavior_chains
+from packageguard.risk import evaluate_risk
 import tarfile
 import tempfile
 import zipfile
@@ -186,28 +188,6 @@ def scan_js_files(output, findings):
     
     return findings
 
-def overall_score(findings):
-    severity_points = {
-            "low": 1,
-            "medium": 2,
-            "high": 4,
-            "critical": 6,
-        }
-
-    score = 0
-    for finding in findings:
-        score += severity_points.get(finding["severity"], 0)
-
-    if score >= 12:
-        risk = "critical"
-    elif score >= 7:
-        risk = "high"
-    elif score >= 3:
-        risk = "medium"
-    else:
-        risk = "low"
-    
-    return score, risk
 
 
 def scan_package(path):
@@ -225,8 +205,9 @@ def scan_package(path):
         all_js_files = find_js_files(clean_path)
         findings = scan_js_files(all_js_files, findings)
 
-        # Calculate risk score
-        score, risk = overall_score(findings)
+        # Apply behavior chains and calculate risk score
+        findings = apply_behavior_chains(findings)
+        score, risk = evaluate_risk(findings)
         
         # Make a report
         report = {
