@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 
 from packageguard.scanner import scan_package
+from packageguard.llm_summary import summarize_report
 
 
 def _supports_color():
@@ -204,6 +205,12 @@ def print_report(report, llm_name=None):
 
 	if llm_name:
 		print("\nSummary:")
+		try:
+			summary = summarize_report(report, llm_name)
+		except Exception as exc:
+			print(f"Summary unavailable: {exc}")
+		else:
+			print(summary or "Summary unavailable.")
 		print("")
 
 	print("Top findings:")
