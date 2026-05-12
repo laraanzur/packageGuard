@@ -27,7 +27,7 @@ function makeFinding(rule, node, extraTags = []) {
     line,
     evidence: line ? getLine(line) : "",
     explanation_recommendation: "",
-    tags: Array.from(new Set([rule['tags'], ...extraTags])),
+    tags: Array.from(new Set([...(rule.tags || []), ...extraTags])),
     //source: "ast"
   };
 }
@@ -103,7 +103,7 @@ traverse(ast, {
 // Function calls
   CallExpression(path) {
     // Function name
-    const name = memberName(path.node.callee);
+    let name = memberName(path.node.callee);
     name = normalizeName(name);
 
     if (RULES[name]) {
@@ -114,7 +114,7 @@ traverse(ast, {
   // When JS uses new operator
   NewExpression(path) {
     // Type of object being created
-    const name = memberName(path.node.callee);
+    let name = memberName(path.node.callee);
     name = normalizeName(name);
 
     if (RULES[name]) {
@@ -124,7 +124,7 @@ traverse(ast, {
 
   // Not function but an attribute/property access, like process.env
   MemberExpression(path) {
-    const name = memberName(path.node);
+    let name = memberName(path.node);
     name = normalizeName(name);
 
     if (name === "process.env") {
