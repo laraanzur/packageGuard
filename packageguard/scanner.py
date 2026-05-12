@@ -97,7 +97,7 @@ def search_package_json(clean_path):
                 "line": None,
                 "evidence": f"{name}: {command}",
                 "explanation_recommendation": "",
-                "tags": ["lifecycle", "script"]
+                "tags": ["lifecycle-reachable"]
             })
 
         # Match certain script patterns to commans

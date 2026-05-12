@@ -5,9 +5,18 @@ const RULES = require("./ast_rules");
 
 const filePath = process.argv[2];
 const code = fs.readFileSync(filePath, "utf8");
+const lines = code.split(/\r?\n/);
+
+function getLine(lineNumber) {
+  if (!lineNumber || lineNumber < 1 || lineNumber > lines.length) {
+    return "";
+  }
+  return lines[lineNumber - 1].trim();
+}
 
 // Add new finding to the list
 function makeFinding(rule, node, extraTags = []) {
+  const line = node.loc ? node.loc.start.line : null;
 
   return {
     rule_id: rule.rule_id,
@@ -15,8 +24,8 @@ function makeFinding(rule, node, extraTags = []) {
     severity: rule.severity,
     confidence: "",
     file: filePath,
-    line: null,
-    evidence: "",
+    line,
+    evidence: line ? getLine(line) : "",
     explanation_recommendation: "",
     tags: Array.from(new Set([rule['tags'], ...extraTags])),
     //source: "ast"
@@ -40,7 +49,22 @@ function memberName(node) {
   return null;
 }
 
+function normalizeName(name) {
+  if (!name) return null;
+
+  const parts = name.split(".");
+  const first = parts[0];
+
+  if (aliases[first]) {
+    parts[0] = aliases[first];
+    return parts.join(".");
+  }
+
+  return name;
+}
+
 const findings = [];
+const aliases = {};
 let ast;
 
 // Try parsing from code to AST
@@ -56,10 +80,31 @@ try {
 
 // Go through the certain node types in AST and apply functions
 traverse(ast, {
+  // Learn aliases for certain modules
+  VariableDeclarator(path) {
+    const node = path.node;
+    // Looking for left side beng variable declaration and right has require + module name
+    if (
+      node.id.type === "Identifier" &&
+      node.init &&
+      node.init.type === "CallExpression" &&
+      node.init.callee.name === "require" &&
+      node.init.arguments[0] &&
+      node.init.arguments[0].type === "StringLiteral"
+    ) {
+      const localName = node.id.name;
+      const moduleName = node.init.arguments[0].value;
+
+      if (["fs", "http", "https", "os", "child_process"].includes(moduleName)) {
+        aliases[localName] = moduleName;
+      }
+    }
+  },
 // Function calls
   CallExpression(path) {
     // Function name
     const name = memberName(path.node.callee);
+    name = normalizeName(name);
 
     if (RULES[name]) {
 
@@ -70,6 +115,7 @@ traverse(ast, {
   NewExpression(path) {
     // Type of object being created
     const name = memberName(path.node.callee);
+    name = normalizeName(name);
 
     if (RULES[name]) {
       findings.push(makeFinding(RULES[name], path.node));
@@ -79,11 +125,12 @@ traverse(ast, {
   // Not function but an attribute/property access, like process.env
   MemberExpression(path) {
     const name = memberName(path.node);
+    name = normalizeName(name);
 
     if (name === "process.env") {
       findings.push(makeFinding(RULES[name], path.node));
     }
-  }
+  },
 });
 
 
