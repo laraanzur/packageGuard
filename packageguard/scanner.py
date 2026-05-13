@@ -162,20 +162,18 @@ def scan_js_file_ast(file):
 
     return ast_findings
 
-def mark_lifecycle_reachable(finding, file, lifecycle_files):
-    file_str = str(file).replace("\\", "/")
+def relative_file_path(file, clean_path):
+    return str(Path(file).relative_to(clean_path)).replace("\\", "/")
 
-    raw_tags = finding.get("tags", [])
-    tags = set()
+def mark_lifecycle_reachable(finding, file, clean_path, lifecycle_files):
+    rel_file = relative_file_path(file, clean_path)
+    finding["file"] = rel_file
 
-    for tag in raw_tags:
-        if isinstance(tag, list):
-            tags.update(tag)
-        else:
-            tags.add(tag)
+    tags = set(finding.get("tags", []))
 
     for lifecycle_file in lifecycle_files:
-        if file_str.endswith(lifecycle_file.replace("\\", "/")):
+        lifecycle_file = lifecycle_file.replace("\\", "/")
+        if rel_file == lifecycle_file:
             tags.add("lifecycle-reachable")
 
     finding["tags"] = sorted(tags)
@@ -201,7 +199,7 @@ def dedupe_findings(findings):
 
     return unique
 
-def scan_js_files(output, findings, lifecycle_findings):
+def scan_js_files(output, findings, clean_path, lifecycle_findings):
     for file in output:
         file = Path(file)
 
@@ -209,7 +207,7 @@ def scan_js_files(output, findings, lifecycle_findings):
         ast_findings = scan_js_file_ast(file)
         
         for finding in ast_findings:
-            finding = mark_lifecycle_reachable(finding, file, lifecycle_findings)
+            finding = mark_lifecycle_reachable(finding, file, clean_path, lifecycle_findings)
             findings.append(finding)
         
         # 2. Apply regex rules
@@ -229,7 +227,7 @@ def scan_js_files(output, findings, lifecycle_findings):
                         "tags": rule["tags"],
                         "source": "regex"
                     }
-                    finding = mark_lifecycle_reachable(finding, file, lifecycle_findings)
+                    finding = mark_lifecycle_reachable(finding, file, clean_path, lifecycle_findings)
                     findings.append(finding)
 
     return findings
@@ -249,7 +247,7 @@ def scan_package(path):
         
         # Find JS files to scan, and then scan them
         all_js_files = find_js_files(clean_path)
-        findings = scan_js_files(all_js_files, findings, lifecycle)
+        findings = scan_js_files(all_js_files, findings, clean_path,lifecycle)
         
         # Deduplicate findings
         findings = dedupe_findings(findings)
