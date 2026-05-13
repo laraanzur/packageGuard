@@ -28,7 +28,7 @@ function makeFinding(rule, node, extraTags = []) {
     evidence: line ? getLine(line) : "",
     explanation_recommendation: "",
     tags: Array.from(new Set([...(rule.tags || []), ...extraTags])),
-    //source: "ast"
+    source: "ast"
   };
 }
 

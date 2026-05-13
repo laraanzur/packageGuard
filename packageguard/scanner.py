@@ -112,7 +112,8 @@ def search_package_json(clean_path):
                 "line": line_number,
                 "evidence": f"{name}: {command}",
                 "explanation_recommendation": "",
-                "tags": ["lifecycle"]
+                "tags": ["lifecycle"],
+                "source": "package.json"
             })
 
         # Match certain script patterns to commans
@@ -127,7 +128,8 @@ def search_package_json(clean_path):
                     "line": line_number,
                     "evidence": f"{name}: {command}",
                     "explanation_recommendation": "",
-                    "tags": rule["id"].split("-")
+                    "tags": rule["tags"],
+                    "source": "package.json-regex"
                 })
     
     return findings, package_json, lifecycle_findings
@@ -202,7 +204,7 @@ def dedupe_findings(findings):
 def scan_js_files(output, findings, lifecycle_findings):
     for file in output:
         file = Path(file)
-        print(f"Scanning {file}...")
+
         # 1. Integrate AST based finding
         ast_findings = scan_js_file_ast(file)
         
@@ -223,9 +225,9 @@ def scan_js_files(output, findings, lifecycle_findings):
                         "file": str(file),
                         "line": line_number,
                         "evidence": line.strip(),
-                        "message": rule["message"],
                         "explanation_recommendation": "",
-                        "tags": rule["id"].split("-")
+                        "tags": rule["tags"],
+                        "source": "regex"
                     }
                     finding = mark_lifecycle_reachable(finding, file, lifecycle_findings)
                     findings.append(finding)
