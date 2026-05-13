@@ -105,6 +105,24 @@ def _recommendation_for_risk(risk):
 	}.get(risk, "Manual review is recommended before installing this package.")
 
 
+def _print_typosquat(report):
+	typosquat = report.get("typosquat") or {}
+	if not typosquat:
+		return
+	risk = str(typosquat.get("risk", "clean")).lower()
+	if risk == "clean":
+		return
+
+	label = _style(risk.upper(), *_severity_style(risk))
+	print(f"Typosquatting possibility: {label}")
+
+	match = typosquat.get("match")
+	if match:
+		print(f"Did you mean {_style(match, * _severity_style('medium'))}?")
+
+	print("")
+
+
 def _resolve_npm_command():
 	npm_path = os.environ.get("NPM_PATH")
 	if npm_path and Path(npm_path).exists():
@@ -188,6 +206,7 @@ def print_report(report, llm_name=None):
 	header = _style("PackageGuard scan report", "\x1b[1m")
 	print(header)
 	print("=" * 40)
+	_print_typosquat(report)	
 	print(f"Package: {package_name}@{package_version}")
 
 	risk_label = _style(risk.upper(), *_severity_style(risk))
@@ -201,6 +220,7 @@ def print_report(report, llm_name=None):
 		f"medium:{counts['medium']} "
 		f"low:{counts['low']}"
 	)
+
 	print(f"Findings: {len(findings)} ({summary})")
 
 	if llm_name:

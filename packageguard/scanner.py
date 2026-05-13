@@ -4,6 +4,7 @@ import re
 from packageguard.rules import JS_RULES, LIFECYCLE_SCRIPTS, SCRIPT_PATTERNS
 from packageguard.behavior_chains import apply_behavior_chains
 from packageguard.risk import evaluate_risk
+from packageguard.typosquat import evaluate_typosquatting
 import tarfile
 import tempfile
 import zipfile
@@ -201,6 +202,8 @@ def scan_package(path):
         # package.json findings
         findings, package_json = search_package_json(clean_path)
         
+        typosquat = evaluate_typosquatting(package_json.get("name", ""))
+
         # Find JS files to scan, and then scan them
         all_js_files = find_js_files(clean_path)
         findings = scan_js_files(all_js_files, findings)
@@ -215,6 +218,7 @@ def scan_package(path):
             "package_version": package_json.get("version", "unknown"),
             "risk": risk,
             "score": score,
+            "typosquat": typosquat,
             "files": all_js_files,
             "findings": findings,
         }
