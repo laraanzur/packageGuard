@@ -1,0 +1,107 @@
+CHAIN_RULES = [
+	{
+		"id": "chain-install-time-exfiltration",
+		"title": "Install-time sensitive data exfiltration pattern",
+		"severity": "critical",
+		"description": "A lifecycle script reaches sensitive data and performs network communication.",
+		"requires": [
+			["lifecycle", "lifecycle-reachable"],
+			["sensitive-file", "env", "token"],
+			["network", "external-url", "suspicious-service"],
+		],
+		"tags": ["lifecycle-reachable", "sensitive-file", "network"],
+	},
+	{
+		"id": "chain-secret-exfiltration",
+		"title": "Possible secret exfiltration",
+		"severity": "critical",
+		"description": "Sensitive data access appears together with network communication.",
+		"requires": [
+			["sensitive-file", "env", "token"],
+			["network", "external-url", "suspicious-service"],
+		],
+		"tags": ["sensitive-file", "network"],
+		"suppressed_by": ["chain-install-time-exfiltration"],
+	},
+	{
+		"id": "chain-install-time-command-execution",
+		"title": "Install-time command execution",
+		"severity": "critical",
+		"description": "Command execution reachable from install-time scripts.",
+		"requires": [
+			["lifecycle", "lifecycle-reachable"],
+			["command-execution"],
+		],
+		"tags": ["lifecycle-reachable", "command-execution"],
+	},
+	{
+		"id": "chain-install-time-download-and-execute",
+		"title": "Install-time download and execute",
+		"severity": "critical",
+		"description": "Install-time code appears to download external content and execute commands.",
+		"requires": [
+			["lifecycle", "lifecycle-reachable"],
+			["download", "external-url", "archive"],
+			["command-execution"],
+		],
+		"tags": ["lifecycle-reachable", "download", "command-execution"],
+	},
+	{
+		"id": "chain-install-time-dropper",
+		"title": "Install-time dropper behavior",
+		"severity": "high",
+		"description": "Install-time code writes files and executes commands.",
+		"requires": [
+			["lifecycle", "lifecycle-reachable"],
+			["file-write"],
+			["command-execution"],
+		],
+		"tags": ["lifecycle-reachable", "file-write", "command-execution"],
+	},
+	{
+		"id": "chain-install-time-sensitive-file-access",
+		"title": "Install-time sensitive file access",
+		"severity": "high",
+		"description": "Install-time code accesses sensitive files on disk.",
+		"requires": [
+			["lifecycle", "lifecycle-reachable"],
+			["sensitive-file"],
+			["file-read"],
+		],
+		"tags": ["lifecycle-reachable", "sensitive-file", "file-read"],
+	},
+	{
+		"id": "chain-install-time-downloader",
+		"title": "Install-time downloader",
+		"severity": "high",
+		"description": "Install-time code downloads external content and writes files.",
+		"requires": [
+			["lifecycle", "lifecycle-reachable"],
+			["download", "external-url", "archive"],
+			["file-write"],
+		],
+		"tags": ["lifecycle-reachable", "download", "file-write"],
+	},
+	{
+		"id": "chain-install-time-cleanup",
+		"title": "Install-time cleanup",
+		"severity": "medium",
+		"description": "Install-time code deletes files, which may hide activity.",
+		"requires": [
+			["lifecycle", "lifecycle-reachable"],
+			["file-delete", "cleanup"],
+		],
+		"tags": ["lifecycle-reachable", "cleanup"],
+	},
+	{
+		"id": "chain-obfuscated-dynamic-execution",
+		"title": "Obfuscated dynamic code execution",
+		"severity": "high",
+		"description": "Obfuscation indicators appear together with dynamic code execution.",
+		"requires": [
+			["obfuscation"],
+			["dynamic-execution"],
+		],
+		"tags": ["obfuscation", "dynamic-execution"],
+	},
+]
