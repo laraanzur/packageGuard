@@ -105,22 +105,16 @@ def _recommendation_for_risk(risk):
 	}.get(risk, "Manual review is recommended before installing this package.")
 
 
-def _print_typosquat(report):
-	typosquat = report.get("typosquat") or {}
-	if not typosquat:
-		return
-	risk = str(typosquat.get("risk", "clean")).lower()
-	if risk == "clean":
-		return
+def _format_value(value):
+	if value is None or value == "":
+		return "unknown"
+	return str(value)
 
-	label = _style(risk.upper(), *_severity_style(risk))
-	print(f"Typosquatting possibility: {label}")
 
-	match = typosquat.get("match")
-	if match:
-		print(f"Did you mean {_style(match, * _severity_style('medium'))}?")
-
-	print("")
+def _format_days(value):
+	if value is None:
+		return "unknown"
+	return f"{value} days"
 
 
 def _resolve_npm_command():
@@ -202,15 +196,58 @@ def print_report(report, llm_name=None):
 	score = report.get("score", 0)
 	files = report.get("files") or {}
 	findings = report.get("findings") or []
+	package_trust = report.get("package_trust") or {}
 
 	header = _style("PackageGuard scan report", "\x1b[1m")
 	print(header)
-	print("=" * 40)
-	_print_typosquat(report)	
+	print("=" * 60)
+	print("")
 	print(f"Package: {package_name}@{package_version}")
+	print("")
 
-	risk_label = _style(risk.upper(), *_severity_style(risk))
-	print(f"Risk: {risk_label} ({score} points)")
+	if package_trust.get("status") == "similar":
+		print(_style("!!! POSSIBLE PACKAGE NAME CONFUSION !!!", *_severity_style("CRITICAL")))
+		print("-" * 60)
+		print(f"You are scanning:      {package_name}")
+		match = package_trust.get("match")
+		if match:
+			print(f"Closest popular match: {match}")
+		print("")
+
+	if llm_name:
+		print("Summary")
+		print("-" * 60)
+		try:
+			summary = summarize_report(report, llm_name)
+		except Exception as exc:
+			print(f"Summary unavailable: {exc}")
+		else:
+			print(summary or "Summary unavailable.")
+		print("")
+
+	trust_risk = str(package_trust.get("risk", "clean")).lower()
+	trust_label = _style(trust_risk.upper(), *_severity_style(trust_risk))
+	print(f"Package trust risk [{trust_label}]")
+	print("-" * 60)
+	status = package_trust.get("status")
+	if status == "similar":
+		name_similarity = "similar"
+	elif status == "exact":
+		name_similarity = "exact match"
+	else:
+		name_similarity = "not detected"
+	print(f"Name similarity to popular packages: {name_similarity}")
+
+	metadata = package_trust.get("metadata") or {}
+	print(f"Downloads last week: {_format_value(metadata.get('downloads_last_week'))}")
+	print(f"Package age: {_format_days(metadata.get('age_days'))}")
+	print(f"Created: {_format_value(metadata.get('created'))}")
+	print(f"Days since last modification: {_format_days(metadata.get('days_since_modified'))}")
+	print("")
+
+	analysis_label = _style(risk.upper(), *_severity_style(risk))
+	print(f"Static code analysis risk [{analysis_label}]")
+	print("-" * 60)
 	print(f"JS files scanned: {_total_js_files(files)}")
 
 	counts = _count_by_severity(findings)
@@ -222,30 +259,22 @@ def print_report(report, llm_name=None):
 	)
 
 	print(f"Findings: {len(findings)} ({summary})")
-
-	if llm_name:
-		print("\nSummary:")
-		try:
-			summary = summarize_report(report, llm_name)
-		except Exception as exc:
-			print(f"Summary unavailable: {exc}")
-		else:
-			print(summary or "Summary unavailable.")
-		print("")
-
 	print("Top findings:")
 	print("")
 
 	if not findings:
 		print("None")
-		print("\nRecommendation:")
+		print("")
+		print("Recommendation")
+		print("-" * 60)
 		print(_recommendation_for_risk(risk))
 		return
 
-	sorted_findings = _sort_findings(findings)
+	sorted_findings = _sort_findings(findings)[:15]
 	_print_findings(sorted_findings)
 
-	print("Recommendation:")
+	print("Recommendation")
+	print("-" * 60)
 	print(_recommendation_for_risk(risk))
 
 
