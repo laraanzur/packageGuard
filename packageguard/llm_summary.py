@@ -3,25 +3,7 @@ import os
 import socket
 from urllib import request, error
 
-
-def _is_chain_finding(finding):
-	rule_id = str(finding.get("rule_id", ""))
-	return finding.get("source") == "behavior-chain" or rule_id.startswith("chain-")
-
-
-def _severity_rank(severity):
-	order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-	return order.get(str(severity or "").lower(), 4)
-
-
-def _sort_findings(findings):
-	return sorted(
-		findings,
-		key=lambda finding: (
-			0 if _is_chain_finding(finding) else 1,
-			_severity_rank(finding.get("severity")),
-		),
-	)
+from packageguard.risk import count_by_severity, finding_score
 
 
 def _shorten(text, limit=200):
@@ -35,12 +17,20 @@ def _shorten(text, limit=200):
 
 def build_summary_payload(report, max_findings=5):
 	findings = report.get("findings") or []
-	sorted_findings = _sort_findings(findings)
-	counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+	chain_findings = []
+	other_findings = []
 	for finding in findings:
-		severity = str(finding.get("severity", "")).lower()
-		if severity in counts:
-			counts[severity] += 1
+		rule_id = str(finding.get("rule_id", ""))
+		if finding.get("source") == "behavior-chain" or rule_id.startswith("chain-"):
+			chain_findings.append(finding)
+		else:
+			other_findings.append(finding)
+
+	chain_findings = sorted(chain_findings, key=finding_score, reverse=True)
+	other_findings = sorted(other_findings, key=finding_score, reverse=True)
+	sorted_findings = chain_findings + other_findings
+
+	counts = count_by_severity(findings)
 
 	top_findings = []
 	for finding in sorted_findings[:max_findings]:

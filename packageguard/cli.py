@@ -8,6 +8,7 @@ import tempfile
 
 from packageguard.scanner import scan_package
 from packageguard.llm_summary import summarize_report
+from packageguard.risk import count_by_severity, finding_score
 
 
 def _supports_color():
@@ -50,15 +51,6 @@ def _total_js_files(files):
 	return len(files)
 
 
-def _count_by_severity(findings):
-	counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-	for finding in findings:
-		severity = str(finding.get("severity", "")).lower()
-		if severity in counts:
-			counts[severity] += 1
-	return counts
-
-
 def _get_tags(finding):
 	tags = finding.get("tags") or []
 	flat = []
@@ -68,47 +60,6 @@ def _get_tags(finding):
 		else:
 			flat.append(tag)
 	return [tag for tag in flat if tag]
-
-
-def _is_chain_finding(finding):
-	rule_id = str(finding.get("rule_id", ""))
-	return finding.get("source") == "behavior-chain" or rule_id.startswith("chain-")
-
-
-def _severity_rank(severity):
-	order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-	return order.get(str(severity or "").lower(), 4)
-
-
-def _confidence_value(raw_value):
-	try:
-		value = float(raw_value)
-	except (TypeError, ValueError):
-		return 0.6
-
-	if value < 0:
-		return 0.0
-	if value > 1:
-		return 1.0
-	return value
-
-
-def _finding_score(finding):
-	severity = str(finding.get("severity", "")).lower()
-	base = {"critical": 20, "high": 6, "medium": 3, "low": 1}.get(severity, 0)
-	confidence = _confidence_value(finding.get("confidence"))
-	return base * confidence
-
-
-def _sort_findings(findings):
-	return sorted(
-		findings,
-		key=lambda finding: (
-			0 if _is_chain_finding(finding) else 1,
-			-_finding_score(finding),
-			_severity_rank(finding.get("severity")),
-		),
-	)
 
 
 def _recommendation_for_risk(risk):
@@ -268,7 +219,7 @@ def print_report(report, llm_name=None):
 	print(f"Score: {score}")
 	print(f"JS files scanned: {_total_js_files(files)}")
 
-	counts = _count_by_severity(findings)
+	counts = count_by_severity(findings)
 	summary = (
 		f"critical:{counts['critical']} "
 		f"high:{counts['high']} "
@@ -288,7 +239,7 @@ def print_report(report, llm_name=None):
 		print(_recommendation_for_risk(risk))
 		return
 
-	sorted_findings = _sort_findings(findings)[:15]
+	sorted_findings = sorted(findings, key=finding_score, reverse=True)[:15]
 	_print_findings(sorted_findings)
 
 	print("Recommendation")

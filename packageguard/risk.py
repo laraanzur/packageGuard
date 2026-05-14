@@ -6,13 +6,42 @@ SEVERITY_POINTS = {
 }
 
 
+def confidence_value(raw_value):
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return 0.6
+
+    if value < 0:
+        return 0.0
+    if value > 1:
+        return 1.0
+    return value
+
+
+def severity_weight(severity):
+    return SEVERITY_POINTS.get(str(severity or "").lower(), 0)
+
+
+def finding_score(finding):
+    base = severity_weight(finding.get("severity"))
+    confidence = confidence_value(finding.get("confidence"))
+    return base * confidence
+
+
+def count_by_severity(findings):
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for finding in findings or []:
+        severity = str(finding.get("severity", "")).lower()
+        if severity in counts:
+            counts[severity] += 1
+    return counts
+
+
 def compute_score(findings):
     score = 0.0
     for finding in findings or []:
-        severity = str(finding.get("severity", "")).lower()
-        base = SEVERITY_POINTS.get(severity, 0)
-        confidence = finding.get("confidence")
-        score += base * confidence
+        score += finding_score(finding)
     return round(score, 2)
 
 
