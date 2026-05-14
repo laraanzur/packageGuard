@@ -47,11 +47,7 @@ def _format_location(finding):
 
 
 def _total_js_files(files):
-	return (
-		len(files.get("js", []))
-		+ len(files.get("mjs", []))
-		+ len(files.get("cjs", []))
-	)
+	return len(files)
 
 
 def _count_by_severity(findings):

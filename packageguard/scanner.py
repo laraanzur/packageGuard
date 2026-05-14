@@ -76,31 +76,45 @@ def extract_script_file(cmd):
 
     return None
 
+def find_line_number(raw_text, name_needle, command_needle=None):
+    for line_number, line in enumerate(raw_text.splitlines(), start=1):
+        if name_needle in line and (command_needle is None or command_needle in line):
+            return line_number
+    return None
+
 def search_package_json(clean_path):
     # Load the file
-    with open(clean_path / 'package.json', 'r') as f:
-        package_json = json.load(f)
+    # with open(clean_path / 'package.json', 'r') as f:
+    #     package_json = json.load(f)
+    
+    raw_text = (clean_path / 'package.json').read_text(errors="ignore")
+    package_json = json.loads(raw_text)
         
     # Scan through it
     findings = []
+    lifecycle_findings = set()
 
     # Find the scripts section, then go through every script
     scripts = package_json.get("scripts", {})
 
     # Find lifecycle scripts
     for name, command in scripts.items():
+        line_number = find_line_number(raw_text, f'"{name}"', command_needle=command)
         if name in LIFECYCLE_SCRIPTS:
             script_file = extract_script_file(command)
+            if script_file:
+                lifecycle_findings.add(script_file)
             findings.append({
                 "rule_id": "lifecycle-script",
                 "title": "Lifecycle script",
                 "severity": "high",
                 "confidence": "",
-                "file": f"package.json -> scripts -> {script_file if script_file else name}",
-                "line": None,
+                "file": f"package.json",
+                "line": line_number,
                 "evidence": f"{name}: {command}",
                 "explanation_recommendation": "",
-                "tags": ["lifecycle-reachable"]
+                "tags": ["lifecycle"],
+                "source": "package.json"
             })
 
         # Match certain script patterns to commans
@@ -112,19 +126,17 @@ def search_package_json(clean_path):
                     "severity": rule["severity"],
                     "confidence": "",
                     "file": "package.json",
-                    "line": None,
+                    "line": line_number,
                     "evidence": f"{name}: {command}",
                     "explanation_recommendation": "",
-                    "tags": rule["id"].split("-")
+                    "tags": rule["tags"],
+                    "source": "package.json-regex"
                 })
     
-    return findings, package_json
+    return findings, package_json, lifecycle_findings
 
 def find_js_files(clean_path):
-    output = {}
-    js_files = []
-    mjs_files = []
-    cjs_files = []
+    output = []
 
     # Walk through package dir
     for file in clean_path.rglob("*"):
@@ -132,20 +144,8 @@ def find_js_files(clean_path):
         if "node_modules" in file.parts or "dist" in file.parts or "build" in file.parts:
             continue
         
-        if file.suffix == ".js":
-            js_files.append(str(file))
-        elif file.suffix == ".mjs":
-            mjs_files.append(str(file))
-        elif file.suffix == ".cjs":
-            cjs_files.append(str(file))
-
-    # Add files to output and serialize to JSON
-    output['js'] = js_files
-    output['mjs'] = mjs_files
-    output['cjs'] = cjs_files
-
-    # with open('output.json', 'w') as f:
-    #     json.dump(output, f)
+        if file.suffix in [".js", ".mjs", ".cjs"]:
+            output.append(str(file))
 
     return output 
 
@@ -163,30 +163,74 @@ def scan_js_file_ast(file):
 
     return ast_findings
 
-def scan_js_files(output, findings):
-    for group in output:
-        for file in output[group]:
-            file = Path(file)
-            # Integrate AST based finding
-            ast_findings = scan_js_file_ast(file)
-            findings.extend(ast_findings)
-            lines = file.read_text(errors="ignore").splitlines()
-            for line_number, line in enumerate(lines, start=1):
-                for rule in JS_RULES:
-                    if re.search(rule["pattern"], line, re.IGNORECASE):
-                        findings.append({
-                            "rule_id": rule["id"],
-                            "title": rule["title"],
-                            "severity": rule["severity"],
-                            "confidence": "",
-                            "file": str(file),
-                            "line": line_number,
-                            "evidence": line.strip(),
-                            "message": rule["message"],
-                            "explanation_recommendation": "",
-                            "tags": rule["id"].split("-")
-                        })
-    
+def relative_file_path(file, clean_path):
+    return str(Path(file).relative_to(clean_path)).replace("\\", "/")
+
+def mark_lifecycle_reachable(finding, file, clean_path, lifecycle_files):
+    rel_file = relative_file_path(file, clean_path)
+    finding["file"] = rel_file
+
+    tags = set(finding.get("tags", []))
+
+    for lifecycle_file in lifecycle_files:
+        lifecycle_file = lifecycle_file.replace("\\", "/")
+        if rel_file == lifecycle_file:
+            tags.add("lifecycle-reachable")
+
+    finding["tags"] = sorted(tags)
+    return finding
+
+def dedupe_findings(findings):
+    seen = set()
+    unique = []
+
+    for finding in findings:
+        key = (
+            finding.get("rule_id"),
+            finding.get("file"),
+            finding.get("line"),
+            finding.get("evidence"),
+        )
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        unique.append(finding)
+
+    return unique
+
+def scan_js_files(output, findings, clean_path, lifecycle_findings):
+    for file in output:
+        file = Path(file)
+
+        # 1. Integrate AST based finding
+        ast_findings = scan_js_file_ast(file)
+        
+        for finding in ast_findings:
+            finding = mark_lifecycle_reachable(finding, file, clean_path, lifecycle_findings)
+            findings.append(finding)
+        
+        # 2. Apply regex rules
+        lines = file.read_text(errors="ignore").splitlines()
+        for line_number, line in enumerate(lines, start=1):
+            for rule in JS_RULES:
+                if re.search(rule["pattern"], line, re.IGNORECASE):
+                    finding ={
+                        "rule_id": rule["id"],
+                        "title": rule["title"],
+                        "severity": rule["severity"],
+                        "confidence": "",
+                        "file": str(file),
+                        "line": line_number,
+                        "evidence": line.strip(),
+                        "explanation_recommendation": "",
+                        "tags": rule["tags"],
+                        "source": "regex"
+                    }
+                    finding = mark_lifecycle_reachable(finding, file, clean_path, lifecycle_findings)
+                    findings.append(finding)
+
     return findings
 
 
@@ -200,13 +244,16 @@ def scan_package(path):
 
     try:
         # package.json findings
-        findings, package_json = search_package_json(clean_path)
+        findings, package_json, lifecycle = search_package_json(clean_path)
         
         package_trust = evaluate_package_trust(package_json.get("name", ""))
 
         # Find JS files to scan, and then scan them
         all_js_files = find_js_files(clean_path)
-        findings = scan_js_files(all_js_files, findings)
+        findings = scan_js_files(all_js_files, findings, clean_path,lifecycle)
+        
+        # Deduplicate findings
+        findings = dedupe_findings(findings)
 
         # Apply behavior chains and calculate risk score
         findings = apply_behavior_chains(findings)
