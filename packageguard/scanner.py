@@ -221,6 +221,9 @@ def scan_js_files(output, findings, clean_path, lifecycle_findings):
         # 2. Apply regex rules
         lines = file.read_text(errors="ignore").splitlines()
         for line_number, line in enumerate(lines, start=1):
+            stripped = line.strip()
+            if stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*") or stripped.startswith("*/"):
+                continue
             for rule in REGEX:
                 if re.search(rule["pattern"], line, re.IGNORECASE):
                     finding ={
