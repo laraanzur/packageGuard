@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 import re
-from packageguard.rules import JS_RULES, LIFECYCLE_SCRIPTS, SCRIPT_PATTERNS
+from packageguard.rules import REGEX, LIFECYCLE_SCRIPTS, SCRIPT_PATTERNS
 from packageguard.behavior_chains import apply_behavior_chains
 from packageguard.risk import evaluate_risk
 from packageguard.package_trust import evaluate_package_trust
@@ -214,7 +214,7 @@ def scan_js_files(output, findings, clean_path, lifecycle_findings):
         # 2. Apply regex rules
         lines = file.read_text(errors="ignore").splitlines()
         for line_number, line in enumerate(lines, start=1):
-            for rule in JS_RULES:
+            for rule in REGEX:
                 if re.search(rule["pattern"], line, re.IGNORECASE):
                     finding ={
                         "rule_id": rule["id"],
