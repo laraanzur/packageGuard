@@ -67,7 +67,7 @@ def apply_behavior_chains(findings):
                 "rule_id": rule_id,
                 "title": rule["title"],
                 "severity": rule["severity"],
-                "confidence": "",
+                "confidence": rule.get("confidence", ""),
                 "file": "behavior-chain",
                 "line": None,
                 "evidence": "; ".join(evidence_parts),

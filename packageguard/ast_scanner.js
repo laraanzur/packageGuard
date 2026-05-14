@@ -22,7 +22,7 @@ function makeFinding(rule, node, extraTags = []) {
     rule_id: rule.rule_id,
     title: rule.title,
     severity: rule.severity,
-    confidence: "",
+    confidence: rule.confidence ?? "",
     file: filePath,
     line,
     evidence: line ? getLine(line) : "",

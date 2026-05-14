@@ -80,11 +80,32 @@ def _severity_rank(severity):
 	return order.get(str(severity or "").lower(), 4)
 
 
+def _confidence_value(raw_value):
+	try:
+		value = float(raw_value)
+	except (TypeError, ValueError):
+		return 0.6
+
+	if value < 0:
+		return 0.0
+	if value > 1:
+		return 1.0
+	return value
+
+
+def _finding_score(finding):
+	severity = str(finding.get("severity", "")).lower()
+	base = {"critical": 20, "high": 6, "medium": 3, "low": 1}.get(severity, 0)
+	confidence = _confidence_value(finding.get("confidence"))
+	return base * confidence
+
+
 def _sort_findings(findings):
 	return sorted(
 		findings,
 		key=lambda finding: (
 			0 if _is_chain_finding(finding) else 1,
+			-_finding_score(finding),
 			_severity_rank(finding.get("severity")),
 		),
 	)
@@ -244,6 +265,7 @@ def print_report(report, llm_name=None):
 	analysis_label = _style(risk.upper(), *_severity_style(risk))
 	print(f"Static code analysis risk [{analysis_label}]")
 	print("-" * 60)
+	print(f"Score: {score}")
 	print(f"JS files scanned: {_total_js_files(files)}")
 
 	counts = _count_by_severity(findings)

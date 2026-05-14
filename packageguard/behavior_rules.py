@@ -3,6 +3,7 @@ CHAIN_RULES = [
 		"id": "chain-install-time-exfiltration",
 		"title": "Install-time sensitive data exfiltration pattern",
 		"severity": "critical",
+		"confidence": 0.9,
 		"description": "A lifecycle script reaches sensitive data and performs network communication.",
 		"requires": [
 			["lifecycle", "lifecycle-reachable"],
@@ -15,6 +16,7 @@ CHAIN_RULES = [
 		"id": "chain-secret-exfiltration",
 		"title": "Possible secret exfiltration",
 		"severity": "critical",
+		"confidence": 0.85,
 		"description": "Sensitive data access appears together with network communication.",
 		"requires": [
 			["sensitive-file", "env", "token"],
@@ -27,6 +29,7 @@ CHAIN_RULES = [
 		"id": "chain-install-time-command-execution",
 		"title": "Install-time command execution",
 		"severity": "critical",
+		"confidence": 0.85,
 		"description": "Command execution reachable from install-time scripts.",
 		"requires": [
 			["lifecycle", "lifecycle-reachable"],
@@ -38,6 +41,7 @@ CHAIN_RULES = [
 		"id": "chain-install-time-download-and-execute",
 		"title": "Install-time download and execute",
 		"severity": "critical",
+		"confidence": 0.9,
 		"description": "Install-time code appears to download external content and execute commands.",
 		"requires": [
 			["lifecycle", "lifecycle-reachable"],
@@ -50,6 +54,7 @@ CHAIN_RULES = [
 		"id": "chain-install-time-dropper",
 		"title": "Install-time dropper behavior",
 		"severity": "high",
+		"confidence": 0.8,
 		"description": "Install-time code writes files and executes commands.",
 		"requires": [
 			["lifecycle", "lifecycle-reachable"],
@@ -62,6 +67,7 @@ CHAIN_RULES = [
 		"id": "chain-install-time-sensitive-file-access",
 		"title": "Install-time sensitive file access",
 		"severity": "high",
+		"confidence": 0.75,
 		"description": "Install-time code accesses sensitive files on disk.",
 		"requires": [
 			["lifecycle", "lifecycle-reachable"],
@@ -74,6 +80,7 @@ CHAIN_RULES = [
 		"id": "chain-install-time-downloader",
 		"title": "Install-time downloader",
 		"severity": "high",
+		"confidence": 0.8,
 		"description": "Install-time code downloads external content and writes files.",
 		"requires": [
 			["lifecycle", "lifecycle-reachable"],
@@ -86,6 +93,7 @@ CHAIN_RULES = [
 		"id": "chain-install-time-cleanup",
 		"title": "Install-time cleanup",
 		"severity": "medium",
+		"confidence": 0.6,
 		"description": "Install-time code deletes files, which may hide activity.",
 		"requires": [
 			["lifecycle", "lifecycle-reachable"],
@@ -97,6 +105,7 @@ CHAIN_RULES = [
 		"id": "chain-obfuscated-dynamic-execution",
 		"title": "Obfuscated dynamic code execution",
 		"severity": "high",
+		"confidence": 0.85,
 		"description": "Obfuscation indicators appear together with dynamic code execution.",
 		"requires": [
 			["obfuscation"],

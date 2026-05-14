@@ -7,21 +7,23 @@ SEVERITY_POINTS = {
 
 
 def compute_score(findings):
-    score = 0
+    score = 0.0
     for finding in findings or []:
         severity = str(finding.get("severity", "")).lower()
-        score += SEVERITY_POINTS.get(severity, 0)
-    return score
+        base = SEVERITY_POINTS.get(severity, 0)
+        confidence = finding.get("confidence")
+        score += base * confidence
+    return round(score, 2)
 
 
 def classify_risk(score):
     if score <= 0:
         return "clean"
-    if score >= 20:
+    if score >= 30:
         return "critical"
-    if score >= 12:
+    if score >= 20:
         return "high"
-    if score >= 8:
+    if score >= 10:
         return "medium"
     return "low"
 
