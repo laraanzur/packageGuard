@@ -245,6 +245,7 @@ def print_report(report, llm_name=None):
 	print("Recommendation")
 	print("-" * 60)
 	print(_recommendation_for_risk(risk))
+	print("-" * 60)
 
 
 def _print_findings(findings):
