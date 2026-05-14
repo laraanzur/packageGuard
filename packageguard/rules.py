@@ -1,9 +1,9 @@
-JS_RULES = [
+REGEX = [
     {
         "id": "sensitive-file-reference",
         "title": "Sensitive file reference",
         "severity": "high",
-        "pattern": r"(\.env|\.npmrc|\.ssh|id_rsa|id_ed25519|\.aws|credentials|\.kube|\.gitconfig)",
+        "pattern": r"(['\"]\.env['\"]|\.npmrc|\.ssh|id_rsa|id_ed25519|\.aws|credentials|\.kube|\.gitconfig)",
         "tags": ["sensitive-file"],
     },
     {
@@ -16,7 +16,7 @@ JS_RULES = [
     {
         "id": "generic-secret-name",
         "title": "Generic secret name",
-        "severity": "medium",
+        "severity": "low",
         "pattern": r"\b(TOKEN|SECRET|PASSWORD|API_KEY)\b",
         "tags": ["token"],
     },
