@@ -183,6 +183,8 @@ def mark_lifecycle_reachable(finding, file, clean_path, lifecycle_files):
 def dedupe_findings(findings):
     seen = set()
     unique = []
+    counts = {}
+    max_per_rule_per_file = 3
 
     for finding in findings:
         key = (
@@ -195,7 +197,12 @@ def dedupe_findings(findings):
         if key in seen:
             continue
 
+        count_key = (finding.get("rule_id"), finding.get("file"))
+        if counts.get(count_key, 0) >= max_per_rule_per_file:
+            continue
+
         seen.add(key)
+        counts[count_key] = counts.get(count_key, 0) + 1
         unique.append(finding)
 
     return unique
