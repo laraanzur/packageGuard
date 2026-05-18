@@ -191,8 +191,10 @@ def evaluate_package_trust(name):
 	
 
 	if score >= 10:
-		risk = "high"
+		risk = "critical"
 	elif score >= 5:
+		risk = "high"
+	elif score >= 2:
 		risk = "medium"
 	elif score >= 0:
 		risk = "low"
