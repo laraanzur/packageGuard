@@ -1,8 +1,8 @@
 SEVERITY_POINTS = {
     "low": 1,
     "medium": 3,
-    "high": 6,
-    "critical": 30,
+    "high": 10,
+    "critical": 50,
 }
 
 
@@ -48,9 +48,9 @@ def compute_score(findings):
 def classify_risk(score):
     if score <= 0:
         return "clean"
-    if score >= 30:
+    if score >= 50:
         return "critical"
-    if score >= 20:
+    if score >= 25:
         return "high"
     if score >= 10:
         return "medium"

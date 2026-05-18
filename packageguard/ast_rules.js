@@ -39,14 +39,14 @@ const RULES = {
     rule_id: "ast-fs-delete",
     title: "File deletion operation",
     severity: "high",
-    confidence: 0.55,
+    confidence: 0.6,
     tags: ["filesystem", "file-delete", "cleanup"]
   },
   "fs.rm": {
     rule_id: "ast-fs-delete",
     title: "File deletion operation",
     severity: "high",
-    confidence: 0.55,
+    confidence: 0.6,
     tags: ["filesystem", "file-delete", "cleanup"]
   },
 // Network rules
@@ -127,35 +127,35 @@ const RULES = {
     rule_id: "ast-child-process-exec",
     title: "Command execution",
     severity: "high",
-    confidence: 0.65,
+    confidence: 0.6,
     tags: ["command-execution"]
   },
   "child_process.execSync": {
     rule_id: "ast-child-process-exec",
     title: "Command execution",
     severity: "high",
-    confidence: 0.65,
+    confidence: 0.6,
     tags: ["command-execution"]
   },
   "child_process.spawn": {
     rule_id: "ast-child-process-exec",
     title: "Process spawning",
     severity: "high",
-    confidence: 0.65,
+    confidence: 0.6,
     tags: ["command-execution"]
   },
   "child_process.spawnSync": {
     rule_id: "ast-child-process-exec",
     title: "Process spawning",
     severity: "high",
-    confidence: 0.65,
+    confidence: 0.6,
     tags: ["command-execution"]
   },
   "child_process.fork": {
     rule_id: "ast-child-process-exec",
     title: "Process forking",
     severity: "high",
-    confidence: 0.65,
+    confidence: 0.6,
     tags: ["command-execution"]
   },
 // Dynamic code execution
@@ -163,14 +163,14 @@ const RULES = {
     rule_id: "ast-dynamic-eval",
     title: "Dynamic code execution",
     severity: "high",
-    confidence: 0.75,
+    confidence: 0.7,
     tags: ["dynamic-execution"]
   },
   "Function": {
     rule_id: "ast-dynamic-function-constructor",
     title: "Function constructor usage",
     severity: "high",
-    confidence: 0.75,
+    confidence: 0.7,
     tags: ["dynamic-execution"]
   }
 };
