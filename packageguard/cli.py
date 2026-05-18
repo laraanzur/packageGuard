@@ -185,12 +185,14 @@ def print_report(report, llm_name=None):
         print("We recommend postponing installation for at least 24 hours if the package is not urgently needed.")
         print("")
         print("")
+    
+    metadata = package_trust.get("metadata") or {}
 
     if llm_name:
         print("LLM Summary")
         print("-" * 60)
         try:
-            summary = summarize_report(report, llm_name)
+            summary = summarize_report(report, metadata, llm_name)
         except Exception as exc:
             print(f"Summary unavailable: {exc}")
         else:
@@ -198,7 +200,6 @@ def print_report(report, llm_name=None):
         print("")
         print("")
 
-    metadata = package_trust.get("metadata") or {}
     if metadata.get("downloads_last_week") is not None:
         trust_risk = str(package_trust.get("risk", "clean")).lower()
         trust_label = _style(trust_risk.upper(), *_severity_style(trust_risk))
@@ -215,7 +216,6 @@ def print_report(report, llm_name=None):
     analysis_label = _style(risk.upper(), *_severity_style(risk))
     print(f"Static code analysis risk [{analysis_label}]")
     print("-" * 60)
-    print(f"Score: {score}")
     print(f"JS files scanned: {_total_js_files(files)}")
 
     counts = count_by_severity(findings)

@@ -15,7 +15,7 @@ def _shorten(text, limit=200):
     return text[: limit - 3].rstrip() + "..."
 
 
-def build_summary_payload(report, max_findings=5):
+def build_summary_payload(report, metadata, max_findings=5):
     findings = report.get("findings") or []
     chain_findings = []
     other_findings = []
@@ -48,6 +48,7 @@ def build_summary_payload(report, max_findings=5):
         "score": report.get("score"),
         "finding_counts": counts,
         "top_findings": top_findings,
+        "package_trust": metadata
     }
 
 
@@ -110,8 +111,8 @@ def _trim_summary(text, limit=600):
 
 
 
-def summarize_report(report, model, max_findings=5, timeout=30):
-    payload = build_summary_payload(report, max_findings=max_findings)
+def summarize_report(report, metadata, model, max_findings=5, timeout=30):
+    payload = build_summary_payload(report, metadata, max_findings=max_findings)
     prompt = build_prompt(payload)
     response = _ollama_generate(model, prompt, timeout=timeout)
     return _trim_summary(response)
