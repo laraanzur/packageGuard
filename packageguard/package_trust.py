@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib import request, error, parse
 
+import editdistance
+
 _MAX_DISTANCE = 2
 _DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "all_10k.json"
 
@@ -53,24 +55,10 @@ def _edit_distance_limited(left, right, max_distance):
     if abs(len(left) - len(right)) > max_distance:
         return max_distance + 1
 
-    previous = list(range(len(right) + 1))
-    for i, left_char in enumerate(left, start=1):
-        current = [i] + [0] * len(right)
-        row_min = current[0]
-        for j, right_char in enumerate(right, start=1):
-            cost = 0 if left_char == right_char else 1
-            current[j] = min(
-                previous[j] + 1,
-                current[j - 1] + 1,
-                previous[j - 1] + cost,
-            )
-            if current[j] < row_min:
-                row_min = current[j]
-        if row_min > max_distance:
-            return max_distance + 1
-        previous = current
-
-    return previous[-1]
+    distance = editdistance.eval(left, right)
+    if distance > max_distance:
+        return max_distance + 1
+    return distance
 
 
 def _fetch_json(url, timeout=6):
@@ -138,8 +126,6 @@ def evaluate_package_trust(name):
                 "distance": 0,
             }
             break
-        if abs(len(candidate_key) - len(normalized)) > _MAX_DISTANCE:
-            continue
         distance = _edit_distance_limited(normalized, candidate_key, _MAX_DISTANCE)
         if distance > _MAX_DISTANCE:
             continue
@@ -159,21 +145,24 @@ def evaluate_package_trust(name):
     elif best:
         score = 12
         status = "similar"
-        formatted_metadata["status"] = f"[!!] Possible typosquating, package name is similar to popular package: {best["match"]}"
+        formatted_metadata["status"] = (
+            "[!!] Possible typosquatting, package name is similar to popular package: "
+            + best["match"]
+        )
     else:
         score = 2
         status = "not found"
         formatted_metadata["status"] = f"[?] Package name not found in the popular package dataset"
 
-    newPackageFlag = False
+    new_package_flag = False
 
     age_days = metadata.get("age_days")
     if age_days is not None:
         if age_days < 1:
             score += 10
             formatted_metadata["age_days"] = f"[!!] Newly created package ({age_days} days)"
-            newPackageFlag = True
-        if age_days <= 30:
+            new_package_flag = True
+        elif age_days <= 30:
             score += 3
             formatted_metadata["age_days"] = f"[?] Recently created package ({age_days} days)"
         elif age_days >= 365:
@@ -201,13 +190,13 @@ def evaluate_package_trust(name):
         if days_since_modified < 1:
             score += 10
             formatted_metadata["days_since_modified"] = f"[!!] Package modified today (0 days)"
-            newPackageFlag = True
+            new_package_flag = True
         elif days_since_modified >= 180:
             score += 2
             formatted_metadata["days_since_modified"] = f"[?] Package not updated in {days_since_modified} days"
         else:
             formatted_metadata["days_since_modified"] = f"[OK] Package is regularly updated"
-    
+
 
     if score >= 10:
         risk = "critical"
@@ -227,5 +216,5 @@ def evaluate_package_trust(name):
         "match": best["match"] if best else None,
         "distance": best["distance"] if best else None,
         "metadata": formatted_metadata,
-        "new_package": newPackageFlag
+        "new_package": new_package_flag
     }

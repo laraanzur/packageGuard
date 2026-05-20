@@ -11,11 +11,7 @@ from packageguard.llm_summary import summarize_report
 from packageguard.risk import count_by_severity, finding_score
 
 
-def _supports_color():
-    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
-
-
-_USE_COLOR = _supports_color()
+_USE_COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
 
 
 def _style(text, *codes):
@@ -47,33 +43,37 @@ def _format_location(finding):
     return f"{file}:{line}"
 
 
-def _total_js_files(files):
-    return len(files)
-
-
 def _get_tags(finding):
     tags = finding.get("tags") or []
     flat = []
     for tag in tags:
         if isinstance(tag, list):
-            flat.extend(tag)
+            for inner in tag:
+                if inner:
+                    flat.append(inner)
         else:
-            flat.append(tag)
-    return [tag for tag in flat if tag]
+            if tag:
+                flat.append(tag)
+    return flat
 
 
 def _recommendation_for_risk(risk, status, new_package):
     risk = str(risk or "").lower()
-    recommendations = {
-        "clean": "No suspicious behavior detected. Proceed with standard review practices.",
-        "low": "Proceed with caution and review the flagged code paths.",
-        "medium": "Manual review is recommended before installing this package.",
-        "high": "Do not install unless the behavior has been manually reviewed and verified.",
-        "critical": "Do not install this package unless the behavior has been manually reviewed and verified.",
-    }
-    output = recommendations.get(risk, "Manual review is recommended before installing this package.")
+    if risk == "clean":
+        output = "No suspicious behavior detected. Proceed with standard review practices."
+    elif risk == "low":
+        output = "Proceed with caution and review the flagged code paths."
+    elif risk == "medium":
+        output = "Manual review is recommended before installing this package."
+    elif risk == "high":
+        output = "Do not install unless the behavior has been manually reviewed and verified."
+    elif risk == "critical":
+        output = "Do not install this package unless the behavior has been manually reviewed and verified."
+    else:
+        output = "Manual review is recommended before installing this package."
+
     if status == "similar":
-            output += " This package has a name similar to a popular package, which may indicate a typosquatting attempt."
+        output += " This package has a name similar to a popular package, which may indicate a typosquatting attempt."
     elif new_package:
         output += " Package was recently published, it is advised to postpone installation."
     
@@ -110,33 +110,29 @@ def _resolve_scan_target(raw_target):
         return str(path), None
 
     temp_dir = tempfile.mkdtemp(prefix="packageguard_scan_")
-    try:
-        npm_cmd = _resolve_npm_command()
-        if not npm_cmd:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            print("npm is not available on PATH. Set NPM_PATH or add npm to PATH to scan package names.")
-            raise SystemExit(1)
-        result = subprocess.run(
-            [npm_cmd, "pack", raw_target],
-            cwd=temp_dir,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        if result.stdout:
-            print(result.stdout.strip())
-    except FileNotFoundError:
+    npm_cmd = _resolve_npm_command()
+    if not npm_cmd:
         shutil.rmtree(temp_dir, ignore_errors=True)
         print("npm is not available on PATH. Set NPM_PATH or add npm to PATH to scan package names.")
         raise SystemExit(1)
-    except subprocess.CalledProcessError as exc:
+
+    result = subprocess.run(
+        [npm_cmd, "pack", raw_target],
+        cwd=temp_dir,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
         shutil.rmtree(temp_dir, ignore_errors=True)
         print("Failed to download package via npm pack.")
-        if exc.stdout:
-            print(exc.stdout.strip())
-        if exc.stderr:
-            print(exc.stderr.strip())
+        if result.stdout:
+            print(result.stdout.strip())
+        if result.stderr:
+            print(result.stderr.strip())
         raise SystemExit(1)
+
+    if result.stdout:
+        print(result.stdout.strip())
 
     tgz_files = sorted(
         Path(temp_dir).glob("*.tgz"),
@@ -155,8 +151,7 @@ def print_report(report, llm_name=None):
     package_name = report.get("package_name", "unknown")
     package_version = report.get("package_version", "unknown")
     risk = str(report.get("risk", "unknown"))
-    score = report.get("score", 0)
-    files = report.get("files") or {}
+    files = report.get("files") or []
     findings = report.get("findings") or []
     package_trust = report.get("package_trust") or {}
 
@@ -193,7 +188,7 @@ def print_report(report, llm_name=None):
         print("-" * 60)
         try:
             summary = summarize_report(report, metadata, llm_name)
-        except Exception as exc:
+        except RuntimeError as exc:
             print(f"Summary unavailable: {exc}")
         else:
             print(summary or "Summary unavailable.")
@@ -216,7 +211,7 @@ def print_report(report, llm_name=None):
     analysis_label = _style(risk.upper(), *_severity_style(risk))
     print(f"Static code analysis risk [{analysis_label}]")
     print("-" * 60)
-    print(f"JS files scanned: {_total_js_files(files)}")
+    print(f"JS files scanned: {len(files)}")
 
     counts = count_by_severity(findings)
     summary = (
@@ -241,8 +236,8 @@ def print_report(report, llm_name=None):
         print(_recommendation_for_risk(risk, status, new_package))
         return
 
-    sorted_findings = sorted(findings, key=finding_score, reverse=True)[:15]
-    _print_findings(sorted_findings)
+    findings = sorted(findings, key=finding_score, reverse=True)[:15]
+    _print_findings(findings)
 
     print("Recommendation")
     print("-" * 60)
@@ -273,7 +268,7 @@ def _print_findings(findings):
         print()
 
 
-parser = argparse.ArgumentParser('PackageGuard Demo')
+parser = argparse.ArgumentParser("PackageGuard Demo")
 parser.add_argument('target', nargs='?', help='Path to package or npm package name')
 parser.add_argument('--path', '-i', help='Path to package (legacy)')
 parser.add_argument('--llm', help='Enable LLM summary output')
