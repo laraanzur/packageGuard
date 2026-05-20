@@ -60,7 +60,7 @@ PackageGuard integrates with local large language models to simplify complex fin
 
 PackageGuard's detection approach is based on two main tecniques:
 
-### a. Regular Expression Rules (`regex`)
+### Regular Expression Rules (`regex`)
 
 | Tag | Scope/Explanation |
 | :------------ | :--------------- | 
